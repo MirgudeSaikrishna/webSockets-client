@@ -1,17 +1,20 @@
 import React, { useEffect, useState } from 'react';
 import io from 'socket.io-client';
-
+import './App.css';
 let socket;
 
 function App() {
   const [message, setMessage] = useState("");
-  const [chat, setChat] = useState([]);
-
+  const [inchat, setInChat] = useState([]);
+  const [outchat, setOutChat] = useState([]);
+  const [room, setRoom] = useState(0);
   useEffect(() => {
     socket = io("http://localhost:3001");
 
     socket.on('receive_message', (data) => {
-      setChat((prev) => [...prev, data.message]);
+      if (data.sender !== socket.id) {
+        setInChat((prev) => [...prev, data.message]);
+      }
     });
 
     // Clean up on unmount
@@ -22,7 +25,8 @@ function App() {
 
   const sendMessage = () => {
     if (socket && message.trim() !== "") {
-      socket.emit('send_message', { message });
+      socket.emit('send_message', { message:message.trim(), room });
+      setOutChat((prev) => [...prev, message.trim()]);
       setMessage('');
     }
   };
@@ -30,10 +34,28 @@ function App() {
   return (
     <div>
       <h2>Chat App</h2>
-      <div>
-        {chat.map((msg, i) => (
-          <p key={i}>{msg}</p>
-        ))}
+      <input
+        type="text"
+        value={room}
+        placeholder="Room..."
+        onChange={(e) => setRoom(e.target.value)}
+      />
+      <button onClick={() => socket.emit('join_room', room)}>Join Room</button>
+      <h3>Room: {room}</h3>
+      <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+        <div>
+          <h3>Outgoing Messages</h3>
+          {outchat.map((msg, i) => (
+            <p key={i}>{msg}<br></br></p>
+          ))}
+        </div>
+        <div>
+          <h3>Incoming Messages</h3>
+          {inchat.map((msg, i) => (
+            <p key={i}>{msg}<br></br></p>
+            
+          ))}
+        </div>
       </div>
       <input
         type="text"
